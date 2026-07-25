@@ -65,6 +65,13 @@ target_include_directories(axon PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
+# `axon` is a static library, but it gets linked into the `_axon` Python extension,
+# which is a shared object. On ELF platforms every object inside a .so must be
+# position-independent, otherwise ld fails with "relocation R_X86_64_PC32 against
+# symbol ... can not be used when making a shared object; recompile with -fPIC".
+# No-op on Windows, where code is position-independent already.
+set_target_properties(axon PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # Strict warnings (best practice: treat code with care).
 if(MSVC)
     target_compile_options(axon PRIVATE /W4 /permissive-)
