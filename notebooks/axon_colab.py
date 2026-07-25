@@ -216,6 +216,59 @@ def drive_dir(*partes, montar=True):
     return caminho
 
 
+# Ordem das fases do repo de dados (fase-1 -> fase-12). A fase-13 não tem lições.
+ORDEM_FASES = ["escolar", "java", "dotnet", "js", "python", "php", "rust", "go", "ruby",
+               "aws", "azure", "gcp", "oci", "bash", "docker", "git", "kubernetes",
+               "shell", "web"]
+
+# Do menor pro maior: dá o custo real de uma rodada antes de encarar as bases grandes.
+ORDEM_TAMANHO = ["rust", "go", "ruby", "php", "dotnet", "python", "java", "js", "escolar",
+                 "aws", "azure", "gcp", "oci", "bash", "docker", "git", "kubernetes",
+                 "shell", "web"]
+
+
+def ja_treinado(expert, pasta_drive="axon_experts"):
+    """O expert já está salvo no Drive? (usado pra retomar a fila sem refazer)"""
+    d = os.path.join(drive_dir(pasta_drive), SAIDA[expert])
+    return (os.path.isfile(os.path.join(d, "router.gate.json")) and
+            os.path.isfile(os.path.join(d, "kb.sparse.json.gz")))
+
+
+def treinar_fila(experts=None, repo="axon-llm", pular_prontos=True,
+                 pasta_drive="axon_experts", extra_env=None):
+    """Treina vários experts em sequência, salvando cada um antes de ir pro próximo.
+
+    Continua sendo um por vez — só não exige voltar na célula 4 dezenove vezes. Um
+    expert que falhar não derruba a fila: o erro é registrado e ela segue. Rodar de
+    novo depois de uma queda de sessão pula o que já está no Drive.
+    """
+    fila = list(experts or ORDEM_FASES)
+    feitos, pulados, erros = [], [], []
+
+    for i, nome in enumerate(fila, 1):
+        cabeca = f"[{i}/{len(fila)}] {nome}"
+        if pular_prontos and ja_treinado(nome, pasta_drive):
+            print(f"{cabeca}: já está no Drive, pulando", flush=True)
+            pulados.append(nome)
+            continue
+        try:
+            print(f"\n{'=' * 60}\n{cabeca}\n{'=' * 60}", flush=True)
+            saida = build_expert(nome, repo=repo, extra_env=extra_env)
+            salvar_expert(saida, nome, pasta_drive)
+            feitos.append(nome)
+        except Exception as erro:                     # noqa: BLE001 - a fila não pode parar
+            print(f"{cabeca}: FALHOU -- {erro}", file=sys.stderr, flush=True)
+            erros.append((nome, str(erro)))
+
+    print(f"\n{'=' * 60}")
+    print(f"treinados agora : {len(feitos)}  {feitos}")
+    print(f"já estavam ok   : {len(pulados)}  {pulados}")
+    print(f"falharam        : {len(erros)}  {[n for n, _ in erros]}")
+    for nome, msg in erros:
+        print(f"  {nome}: {msg}")
+    return {"feitos": feitos, "pulados": pulados, "erros": erros}
+
+
 def perguntas(expert, repo="axon-llm"):
     """As perguntas de teste do expert, lidas do próprio `build_*_experts.py`.
 
