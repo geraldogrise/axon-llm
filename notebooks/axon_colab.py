@@ -58,23 +58,22 @@ BASES = {
 
 
 def token():
-    """Token do GitHub. Os dois repos são privados, então o clone precisa dele.
+    """Token do GitHub — opcional: os dois repos são públicos.
 
-    Procura em `GH_TOKEN`/`GITHUB_TOKEN` e, se não achar, nos Secrets do Colab
-    (ícone da chave na barra lateral -> novo secret `GH_TOKEN`, com acesso de
-    leitura aos repos `axon-llm` e `treinamento`).
+    Só serve se você voltar a fechá-los. Procura em `GH_TOKEN`/`GITHUB_TOKEN` e,
+    se não achar, no secret `GH_TOKEN` do Colab. Sem token, o clone é anônimo.
     """
     tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
     if tok:
         return tok
     try:
         from google.colab import userdata
-        tok = userdata.get("GH_TOKEN")
+        tok = userdata.get("GH_TOKEN")   # levanta se o secret não existir
         if tok:
             os.environ["GH_TOKEN"] = tok
         return tok
     except Exception:
-        return None
+        return None   # sem secret = repo público, clone anônimo
 
 
 def _auth(url):
@@ -124,10 +123,6 @@ def fetch_data(expert, raiz="dados"):
     branch, sub, _, _, _ = check(expert)
     dest = os.path.join(raiz, branch)
     if not os.path.isdir(dest):
-        if not token():
-            raise RuntimeError(
-                "repo de dados é privado: crie o secret GH_TOKEN nos Secrets do Colab "
-                "(ícone da chave) com acesso de leitura a geraldogrise/treinamento")
         _run(["git", "clone", "--depth", "1", "--branch", branch, _auth(DATA_REPO), dest])
     caminho = os.path.join(dest, *sub.split("/"))
     if not os.path.isdir(caminho):
