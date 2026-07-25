@@ -10,6 +10,20 @@ Dois repositórios, um de cada lado:
 O mapa "expert → branch → script" vive em [`axon_colab.py`](./axon_colab.py) — é a única
 fonte da tabela, os notebooks importam de lá. `ac.tabela()` imprime tudo.
 
+## Antes de tudo: o token
+
+Os dois repos são **privados**, então o Colab precisa de um token pra clonar:
+
+1. GitHub → *Settings* → *Developer settings* → **Personal access tokens** → gere um com
+   leitura (`repo` / `Contents: read`) nos repos `axon-llm` e `treinamento`.
+2. No Colab, ícone da **🔑** na barra lateral esquerda → *Adicionar novo secret* →
+   nome `GH_TOKEN`, valor = o token → ligue **Acesso ao notebook**.
+
+Os notebooks leem esse secret e nunca imprimem o token (a saída é redigida pra `***`).
+Não cole o token direto numa célula — ele ficaria salvo dentro do `.ipynb`.
+
+> Se preferir, dá pra tornar os repos públicos e pular essa parte inteira.
+
 ## Ordem
 
 ### 1. `train_expert_colab.ipynb` — o expert (retrieval)

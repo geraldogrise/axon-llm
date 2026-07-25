@@ -57,15 +57,49 @@ BASES = {
 }
 
 
+def token():
+    """Token do GitHub. Os dois repos são privados, então o clone precisa dele.
+
+    Procura em `GH_TOKEN`/`GITHUB_TOKEN` e, se não achar, nos Secrets do Colab
+    (ícone da chave na barra lateral -> novo secret `GH_TOKEN`, com acesso de
+    leitura aos repos `axon-llm` e `treinamento`).
+    """
+    tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if tok:
+        return tok
+    try:
+        from google.colab import userdata
+        tok = userdata.get("GH_TOKEN")
+        if tok:
+            os.environ["GH_TOKEN"] = tok
+        return tok
+    except Exception:
+        return None
+
+
+def _auth(url):
+    """Injeta o token na URL do clone (repos privados)."""
+    tok = token()
+    if not tok or not url.startswith("https://"):
+        return url
+    return url.replace("https://", f"https://x-access-token:{tok}@", 1)
+
+
+def _limpa(texto):
+    """Nunca deixa o token vazar no output do notebook."""
+    tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    return texto.replace(tok, "***") if tok and texto else texto
+
+
 def _run(cmd, **kw):
     """Roda um comando ecoando a saída (o Colab só mostra o que sai na hora)."""
-    print("$", " ".join(cmd), flush=True)
+    print("$", _limpa(" ".join(cmd)), flush=True)
     p = subprocess.run(cmd, text=True, capture_output=True, **kw)
     if p.stdout:
-        print(p.stdout, flush=True)
+        print(_limpa(p.stdout), flush=True)
     if p.returncode != 0:
-        print(p.stderr, file=sys.stderr, flush=True)
-        raise RuntimeError(f"falhou ({p.returncode}): {' '.join(cmd)}")
+        print(_limpa(p.stderr), file=sys.stderr, flush=True)
+        raise RuntimeError(f"falhou ({p.returncode}): {_limpa(' '.join(cmd))}")
     return p.stdout
 
 
@@ -78,7 +112,7 @@ def check(expert):
 def fetch_code(dest="axon-llm"):
     """Clona o repo de código (idempotente)."""
     if not os.path.isdir(dest):
-        _run(["git", "clone", "--depth", "1", CODE_REPO, dest])
+        _run(["git", "clone", "--depth", "1", _auth(CODE_REPO), dest])
     return os.path.abspath(dest)
 
 
@@ -90,7 +124,11 @@ def fetch_data(expert, raiz="dados"):
     branch, sub, _, _, _ = check(expert)
     dest = os.path.join(raiz, branch)
     if not os.path.isdir(dest):
-        _run(["git", "clone", "--depth", "1", "--branch", branch, DATA_REPO, dest])
+        if not token():
+            raise RuntimeError(
+                "repo de dados é privado: crie o secret GH_TOKEN nos Secrets do Colab "
+                "(ícone da chave) com acesso de leitura a geraldogrise/treinamento")
+        _run(["git", "clone", "--depth", "1", "--branch", branch, _auth(DATA_REPO), dest])
     caminho = os.path.join(dest, *sub.split("/"))
     if not os.path.isdir(caminho):
         raise FileNotFoundError(f"'{caminho}' não existe na branch {branch}")
