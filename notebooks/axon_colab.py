@@ -216,6 +216,25 @@ def drive_dir(*partes, montar=True):
     return caminho
 
 
+def perguntas(expert, repo="axon-llm"):
+    """As perguntas de teste do expert, lidas do próprio `build_*_experts.py`.
+
+    Cada script tem uma lista `QUESTIONS = [(família, pergunta), ...]` que é o que
+    ele usa pra medir a acurácia de roteamento. Ler de lá (com `ast`, sem executar
+    o script) evita manter uma segunda cópia que sai de sincronia.
+    """
+    import ast
+    _, _, _, script, _ = check(expert)
+    caminho = os.path.join(repo, "examples", script)
+    with open(caminho, encoding="utf-8") as f:
+        arvore = ast.parse(f.read(), filename=caminho)
+    for no in arvore.body:
+        if isinstance(no, ast.Assign) and any(
+                isinstance(alvo, ast.Name) and alvo.id == "QUESTIONS" for alvo in no.targets):
+            return [tuple(par) for par in ast.literal_eval(no.value)]
+    return []
+
+
 def salvar_expert(saida, expert, pasta_drive="axon_experts"):
     """Copia router + KB do expert pro Drive. A sessão do Colab cai; o Drive não."""
     import shutil
