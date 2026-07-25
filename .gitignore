@@ -1,0 +1,40 @@
+# Build
+/build/
+/build-*/
+/out/
+/cmake-build-*/
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.pyd
+*.a
+*.lib
+*.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+CMakeCache.txt
+CMakeFiles/
+
+# Large data (do not version)
+/datasets/
+/checkpoints/
+/examples/axon_lang_data/
+*.bin
+*.ckpt

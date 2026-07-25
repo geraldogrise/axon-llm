@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=64", "pybind11>=2.11"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyaxon"
+version = "0.1.0"
+description = "Educational deep learning library (Python API + C++ core)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "pyaxon" }]
+keywords = ["deep-learning", "autograd", "tensor", "educational"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pybind11>=2.11"]
+
+[project.scripts]
+pyaxon = "pyaxon.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+# Include the compiled extension (_axon.pyd/.so) and the web page in the package/wheel.
+[tool.setuptools.package-data]
+pyaxon = ["*.pyd", "*.so", "*.dll", "web/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

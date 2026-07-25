@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pyaxon — Architecture</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --panel2: #1c2430; --border: #2b3442;
+    --text: #e6edf3; --muted: #9aa7b4; --accent: #6ea8fe; --accent2: #7ee0c0;
+    --warn: #f0b866; --code-bg: #0a0e14; --shadow: rgba(0,0,0,.4);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f8fa; --panel: #ffffff; --panel2: #f0f3f7; --border: #d5dbe2;
+      --text: #1a2029; --muted: #5b6672; --accent: #2563eb; --accent2: #0f9d76;
+      --warn: #b5730f; --code-bg: #0d1117; --shadow: rgba(20,30,50,.08);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.65; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+  header {
+    text-align: center; padding: 72px 20px 48px;
+    background:
+      radial-gradient(1200px 400px at 50% -100px, rgba(110,168,254,.18), transparent 70%);
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 12px; font-weight: 800;
+    font-size: clamp(2.2rem, 6vw, 3.6rem); letter-spacing: -1.5px;
+  }
+  .logo .dot { color: var(--accent); }
+  .logo .ax { color: var(--accent2); }
+  .tagline { color: var(--muted); font-size: 1.15rem; max-width: 620px; margin: 16px auto 0; }
+  .badges { margin-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 14px; font-size: .82rem; color: var(--muted); font-weight: 600;
+  }
+  h2 {
+    font-size: 1.55rem; margin: 56px 0 4px; letter-spacing: -.5px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  h2 .num {
+    font-size: .85rem; background: var(--accent); color: #fff; width: 30px; height: 30px;
+    display: grid; place-items: center; border-radius: 8px; flex: none; font-weight: 700;
+  }
+  h3 { margin: 28px 0 6px; font-size: 1.1rem; }
+  p { color: var(--text); }
+  .lead { color: var(--muted); margin-top: 2px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 24px; margin-top: 20px; box-shadow: 0 6px 22px var(--shadow);
+  }
+  code, pre { font-family: "SF Mono", "JetBrains Mono", Consolas, monospace; }
+  pre {
+    background: var(--code-bg); color: #e6edf3; border-radius: 10px; padding: 16px 18px;
+    overflow-x: auto; font-size: .86rem; line-height: 1.55; border: 1px solid #22303f;
+  }
+  .inline { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1px 6px; font-size: .88em; }
+  /* layer stack */
+  .stack { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .layer {
+    border-radius: 12px; padding: 16px 18px; border: 1px solid var(--border);
+    background: var(--panel2); display: flex; justify-content: space-between;
+    align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .layer .t { font-weight: 700; }
+  .layer .d { color: var(--muted); font-size: .9rem; }
+  .layer.py { border-color: var(--accent); box-shadow: inset 0 0 0 1px rgba(110,168,254,.25); }
+  .layer.cpp { border-color: var(--accent2); box-shadow: inset 0 0 0 1px rgba(126,224,192,.25); }
+  .arrow { text-align: center; color: var(--muted); font-size: 1.1rem; line-height: 1; }
+  /* phases grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+  .phase { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .phase .p { font-size: .75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; }
+  .phase .h { font-weight: 700; margin: 4px 0 6px; }
+  .phase .m { color: var(--muted); font-size: .88rem; }
+  /* perf table */
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: .9rem; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: .82rem; text-transform: uppercase; letter-spacing: .4px; }
+  td .tag { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-size: .8rem; }
+  .note {
+    border-left: 3px solid var(--warn); background: var(--panel); padding: 12px 16px;
+    border-radius: 0 10px 10px 0; margin-top: 20px; color: var(--muted); font-size: .92rem;
+  }
+  .note b { color: var(--text); }
+  footer { text-align: center; color: var(--muted); margin-top: 72px; font-size: .88rem; }
+  a { color: var(--accent); }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+  .flow span { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: .85rem; font-weight: 600; }
+  .flow .op { color: var(--muted); font-weight: 400; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><span class="ax">py</span><span>axon</span><span class="dot">.</span></div>
+  <p class="tagline">A PyTorch/TensorFlow-style deep learning library —
+    <b>Python API</b>, <b>C++ core</b> — built from scratch to study and optimize performance.</p>
+  <div class="badges">
+    <span class="badge">🐍 Python + 🧠 C++</span>
+    <span class="badge">Dynamic autograd</span>
+    <span class="badge">SIMD · OpenMP · CUDA</span>
+    <span class="badge">Educational</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <p class="lead">This page summarizes <b>what will be built</b> and <b>how</b>. The technical
+  deep dive lives in <span class="inline">docs/ARCHITECTURE.md</span> and the original roadmap in
+  <span class="inline">plan.md</span>.</p>
+
+  <h2><span class="num">1</span> The idea</h2>
+  <div class="card">
+    <p>The name is <b>Py</b> (Python) + <b>axon</b> (the fiber that connects neurons).
+    The goal isn't to compete with PyTorch — it's to <b>learn by building</b>: to understand how a
+    Tensor lives in memory, how autograd computes gradients, and how to squeeze performance
+    out of the hardware. Python provides the ergonomics; C++ does the heavy lifting.</p>
+  </div>
+
+  <h2><span class="num">2</span> Layered architecture</h2>
+  <p class="lead">Thin Python on top, heavy C++ underneath. Every expensive computation runs in the core.</p>
+  <div class="stack">
+    <div class="layer py">
+      <div><div class="t">Python layer — <code>import pyaxon as ax</code></div>
+        <div class="d">ax.tensor · ax.nn · ax.optim · ax.tokenizer · ax.transformer</div></div>
+      <div class="d">ergonomics</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="layer">
+      <div><div class="t">Bindings (pybind11)</div>
+        <div class="d">exposes the C++ classes to Python, with operator overloading</div></div>
+      <div class="d">bridge</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="layer cpp">
+      <div><div class="t">C++ core — "libaxon"</div>
+        <div class="d">Tensor · Autograd · Ops · nn · optim · tokenizer · transformer</div></div>
+      <div class="d">performance</div>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="layer">
+      <div><div class="t">Execution backends</div>
+        <div class="d">CPU (SIMD AVX2/AVX-512 + OpenMP) &nbsp;|&nbsp; GPU (CUDA — later phases)</div></div>
+      <div class="d">hardware</div>
+    </div>
+  </div>
+
+  <h2><span class="num">3</span> The Tensor</h2>
+  <div class="card">
+    <p>The fundamental building block: an N-dimensional array in a <b>contiguous</b> buffer (row-major).
+    It uses <span class="inline">shape</span> + <span class="inline">strides</span> to enable
+    <i>views</i> (transpose, slice, reshape) <b>without copying data</b> — the same technique as NumPy.
+    Transposing a matrix becomes just swapping two numbers.</p>
+    <pre>class Tensor {
+    std::shared_ptr&lt;Storage&gt; storage;   // raw buffer (owns the data)
+    std::vector&lt;int64_t&gt; shape;          // dimensions
+    std::vector&lt;int64_t&gt; strides;        // steps -> enables views without copying
+    bool requires_grad = false;          // participates in autograd?
+    std::shared_ptr&lt;Tensor&gt; grad;        // accumulated gradient
+    std::shared_ptr&lt;Function&gt; grad_fn;   // node that created me in the graph
+};</pre>
+  </div>
+
+  <h2><span class="num">4</span> Autograd (automatic differentiation)</h2>
+  <div class="card">
+    <p>Each operation records <b>how to compute its gradient</b>. On the <b>forward</b> pass, in addition to the
+    result, it creates a node that stores the inputs. On the <b>backward</b> pass, it walks the graph in reverse,
+    applying the chain rule.</p>
+    <div class="flow">
+      <span>a</span><span>b</span><span class="op">→</span><span>MatMul</span>
+      <span class="op">→</span><span>ReLU</span><span class="op">→</span><span>loss</span>
+      <span class="op">— .backward() flows back accumulating gradients →</span>
+    </div>
+    <p style="margin-top:14px">Example — matrix multiplication <code>C = A·B</code>:
+    &nbsp;<code>grad_A = grad_C · Bᵀ</code> &nbsp;and&nbsp; <code>grad_B = Aᵀ · grad_C</code>.</p>
+  </div>
+
+  <h2><span class="num">5</span> Where the performance lives</h2>
+  <p class="lead">Each kernel has a naive version (correct, reference) and fast versions measured in benchmarks.</p>
+  <div class="card">
+    <h3>Case study: <code>matmul</code></h3>
+    <table>
+      <thead><tr><th>Step</th><th>Technique</th><th>Expected gain</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">1</span></td><td>Naive (3 loops)</td><td>baseline</td></tr>
+        <tr><td><span class="tag">2</span></td><td>Reorder loops (cache-friendly)</td><td>sequential access</td></tr>
+        <tr><td><span class="tag">3</span></td><td>Blocking / tiling (fits in L1/L2)</td><td>fewer cache misses</td></tr>
+        <tr><td><span class="tag">4</span></td><td>SIMD (AVX2 = 8 floats, AVX-512 = 16)</td><td>vectorization</td></tr>
+        <tr><td><span class="tag">5</span></td><td>OpenMP (multithreading)</td><td>× cores</td></tr>
+        <tr><td><span class="tag">6</span></td><td>CUDA / cuBLAS (GPU)</td><td>massively parallel</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>Golden rule:</b> nothing lands without a test, and every hot path comes with
+      a number — "how many times faster did it get?".</div>
+  </div>
+
+  <h2><span class="num">6</span> Transformer (mini-GPT)</h2>
+  <div class="card">
+    <div class="flow">
+      <span>tokens</span><span class="op">→</span><span>Embedding</span><span class="op">→</span>
+      <span>+ Positional</span><span class="op">→</span><span>Self-Attention</span><span class="op">→</span>
+      <span>Add &amp; Norm</span><span class="op">→</span><span>FeedForward</span><span class="op">→</span>
+      <span>Add &amp; Norm</span><span class="op">→</span><span>logits</span>
+    </div>
+    <pre>Attention(Q, K, V) = softmax( Q·Kᵀ / √d_k ) · V</pre>
+    <p>With <b>multi-head</b>, <b>positional encoding</b> and <b>causal masking</b> (a token can't see the future).</p>
+  </div>
+
+  <h2><span class="num">7</span> Roadmap (8 phases)</h2>
+  <div class="grid">
+    <div class="phase"><div class="p">Phase 1</div><div class="h">Foundations + tooling</div><div class="m">CMake, CI, repository layout</div></div>
+    <div class="phase"><div class="p">Phase 2</div><div class="h">Tensor + linear algebra</div><div class="m">core/, ops/cpu/ (add, matmul…)</div></div>
+    <div class="phase"><div class="p">Phase 3</div><div class="h">Autograd + first network</div><div class="m">Train XOR end to end ✅</div></div>
+    <div class="phase"><div class="p">Phase 4</div><div class="h">Tokenizer</div><div class="m">word-level → BPE → WordPiece</div></div>
+    <div class="phase"><div class="p">Phase 5</div><div class="h">Transformers</div><div class="m">attention, embedding, decoder</div></div>
+    <div class="phase"><div class="p">Phase 6</div><div class="h">Training</div><div class="m">DataLoader, checkpoints, logs</div></div>
+    <div class="phase"><div class="p">Phase 7</div><div class="h">Optimized inference</div><div class="m">SIMD, OpenMP, CUDA</div></div>
+    <div class="phase"><div class="p">Phase 8</div><div class="h">Complete engine</div><div class="m">examples, packaging, REST API</div></div>
+  </div>
+
+  <h2><span class="num">8</span> What the API will look like</h2>
+  <div class="card">
+    <pre>import pyaxon as ax
+import pyaxon.nn as nn
+
+x = ax.tensor([[0,0],[0,1],[1,0],[1,1]])
+y = ax.tensor([[0],[1],[1],[0]])
+
+model = nn.Sequential(
+    nn.Linear(2, 8), nn.ReLU(), nn.Linear(8, 1),
+)
+opt = ax.optim.Adam(model.parameters(), lr=0.05)
+
+for epoch in range(1000):
+    pred = model(x)
+    loss = ax.mse_loss(pred, y)
+    opt.zero_grad()
+    loss.backward()      # autograd running in C++
+    opt.step()</pre>
+  </div>
+
+  <footer>
+    pyaxon — study project · design-phase documentation ·
+    see <span class="inline">README.md</span> and <span class="inline">docs/ARCHITECTURE.md</span>
+  </footer>
+</div>
+</body>
+</html>
