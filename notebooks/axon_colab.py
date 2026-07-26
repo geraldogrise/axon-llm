@@ -225,6 +225,12 @@ ORDEM_FASES = ["escolar", "java", "dotnet", "js", "python", "php", "rust", "go",
                "aws", "azure", "gcp", "oci", "bash", "docker", "git", "kubernetes",
                "shell", "web"]
 
+# O conjunto final: como ORDEM_FASES, mas com `terminal` no lugar de `bash` + `shell`
+# (o mesmo domínio partido em dois roteava mal separado). 18 experts, 266 perguntas.
+ORDEM_FINAL = ["escolar", "java", "dotnet", "js", "python", "php", "rust", "go", "ruby",
+               "aws", "azure", "gcp", "oci", "terminal", "docker", "git", "kubernetes",
+               "web"]
+
 # Do menor pro maior: dá o custo real de uma rodada antes de encarar as bases grandes.
 ORDEM_TAMANHO = ["rust", "go", "ruby", "php", "dotnet", "python", "java", "js", "escolar",
                  "aws", "azure", "gcp", "oci", "bash", "docker", "git", "kubernetes",
