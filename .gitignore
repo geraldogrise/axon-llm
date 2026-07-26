@@ -38,3 +38,9 @@ CMakeFiles/
 /examples/axon_lang_data/
 *.bin
 *.ckpt
+*.gguf
+
+# Adapters baixados do Drive: o README e os Modelfile entram, os pesos não.
+/adapters/*
+!/adapters/README.md
+!/adapters/Modelfile*
