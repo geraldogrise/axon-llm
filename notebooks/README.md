@@ -59,10 +59,3 @@ Não é necessário pros dois de cima; é a demonstração de que o backend de G
 
 Na T4, 7B em 4-bit com `max_seq_length=2048` roda com `batch_size=1` +
 `gradient_accumulation=8`. Se der OOM, caia pro `qwen-3b` ou baixe o `MAX_LEN` pra 1024.
-
-## Legado
-
-`finetune_axon_colab.ipynb` é a versão antiga: pede upload manual de um zip
-`treinamento_portugues/` e usa Llama-3.2-3B. Foi substituído pelo
-`finetune_expert_colab.ipynb`, que puxa os dados direto da branch e trabalha por expert.
-Mantido só como referência.
