@@ -52,11 +52,19 @@ EXPERTS = {
 # Onde cada script grava o router + KB (relativo a examples/axon_lang_data/).
 SAIDA = {k: ("rag_final" if k == "escolar" else f"{k}_experts") for k in EXPERTS}
 
-# Modelos-base testados na T4 grátis (16 GB) via Unsloth em 4-bit.
+# Modelos-base pra T4 grátis (16 GB). Todos os nomes conferidos na API do Hugging Face.
+#
+# Os `unsloth/...-bnb-4bit` já vêm quantizados: baixam ~4 GB e carregam direto. O Unsloth
+# não publica um 4-bit do deepseek-coder (os DeepSeek dele são R1/Prover), então esse usa
+# o repositório oficial em fp16 e o `load_in_4bit=True` quantiza na hora -- funciona igual,
+# mas baixa ~13 GB antes.
 BASES = {
-    "deepseek": "unsloth/deepseek-coder-6.7b-instruct-bnb-4bit",
-    "qwen":     "unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit",
-    "qwen-3b":  "unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit",  # folga se a T4 apertar
+    "deepseek":     "deepseek-ai/deepseek-coder-6.7b-instruct",
+    "deepseek-1b":  "deepseek-ai/deepseek-coder-1.3b-instruct",
+    "qwen":         "unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit",
+    "qwen-14b":     "unsloth/Qwen2.5-Coder-14B-Instruct-bnb-4bit",   # apertado na T4
+    "qwen-3b":      "unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit",
+    "qwen-1.5b":    "unsloth/Qwen2.5-Coder-1.5B-Instruct-bnb-4bit",
 }
 
 

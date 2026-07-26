@@ -53,9 +53,15 @@ Não é necessário pros dois de cima; é a demonstração de que o backend de G
 
 | Chave | Modelo | Nota |
 |---|---|---|
-| `deepseek` | `unsloth/deepseek-coder-6.7b-instruct-bnb-4bit` | cabe na T4 grátis em 4-bit |
-| `qwen` | `unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit` | idem |
+| `deepseek` | `deepseek-ai/deepseek-coder-6.7b-instruct` | fp16; o `load_in_4bit` quantiza na hora (baixa ~13 GB) |
+| `deepseek-1b` | `deepseek-ai/deepseek-coder-1.3b-instruct` | idem, bem menor |
+| `qwen` | `unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit` | já vem em 4-bit (~4 GB) |
+| `qwen-14b` | `unsloth/Qwen2.5-Coder-14B-Instruct-bnb-4bit` | apertado na T4 |
 | `qwen-3b` | `unsloth/Qwen2.5-Coder-3B-Instruct-bnb-4bit` | se a T4 estourar memória |
+| `qwen-1.5b` | `unsloth/Qwen2.5-Coder-1.5B-Instruct-bnb-4bit` | o mais folgado |
+
+O Unsloth não publica um 4-bit do `deepseek-coder` — os DeepSeek dele são R1/Prover. Por
+isso essa entrada aponta pro repositório oficial em fp16.
 
 Na T4, 7B em 4-bit com `max_seq_length=2048` roda com `batch_size=1` +
 `gradient_accumulation=8`. Se der OOM, caia pro `qwen-3b` ou baixe o `MAX_LEN` pra 1024.
