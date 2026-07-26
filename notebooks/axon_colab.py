@@ -44,6 +44,9 @@ EXPERTS = {
     "kubernetes": ("fase-11", "treinamento_kubernetes",        "AXON_KUBERNETES_DIR", "build_kubernetes_experts.py", "Kubernetes"),
     "shell":      ("fase-11", "treinamento_shell",             "AXON_SHELL_DIR",   "build_shell_experts.py",     "Shell"),
     "web":        ("fase-12", "treinamento_web",               "AXON_WEB_DIR",     "build_web_experts.py",       "Web (HTML/CSS)"),
+    # Substitui bash+shell por um expert só (a subpasta é a raiz do clone, porque o
+    # script varre treinamento_bash/ e treinamento_shell/ lado a lado).
+    "terminal":   ("fase-11", "",                              "AXON_TERMINAL_DIR", "build_terminal_experts.py", "Terminal (bash + shell)"),
 }
 
 # Onde cada script grava o router + KB (relativo a examples/axon_lang_data/).
@@ -124,7 +127,8 @@ def fetch_data(expert, raiz="dados"):
     dest = os.path.join(raiz, branch)
     if not os.path.isdir(dest):
         _run(["git", "clone", "--depth", "1", "--branch", branch, _auth(DATA_REPO), dest])
-    caminho = os.path.join(dest, *sub.split("/"))
+    # sub vazio = o expert lê mais de uma pasta e recebe a raiz do clone.
+    caminho = os.path.join(dest, *sub.split("/")) if sub else dest
     if not os.path.isdir(caminho):
         raise FileNotFoundError(f"'{caminho}' não existe na branch {branch}")
     n = sum(len(fs) for _, _, fs in os.walk(caminho))
