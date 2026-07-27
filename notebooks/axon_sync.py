@@ -45,19 +45,49 @@ LIMITE_ERRO = 95 * 1024 ** 2
 LIMITE_AVISO = 45 * 1024 ** 2
 
 
+# Nomes de secret aceitos, em ordem. O nome do token no GitHub é só uma etiqueta e não
+# importa aqui -- o que conta é como o secret foi chamado no Colab. Acrescente o seu
+# nesta lista se usar outro: NOMES_SECRET.insert(0, "meu_nome").
+NOMES_SECRET = ["GH_TOKEN", "GITHUB_TOKEN", "github_geraldo_grise", "gh_token"]
+
+_origem_token = None
+
+
 def _token():
     """Token do GitHub -- obrigatório pra subir (push), dispensável pra baixar."""
-    tok = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
-    if tok:
-        return tok
+    global _origem_token
+    for var in ("GH_TOKEN", "GITHUB_TOKEN"):
+        if os.environ.get(var):
+            _origem_token = _origem_token or f"variável de ambiente {var}"
+            return os.environ[var]
     try:
         from google.colab import userdata
-        tok = userdata.get("GH_TOKEN")
-        if tok:
-            os.environ["GH_TOKEN"] = tok
-        return tok
     except Exception:
         return None
+    for nome in NOMES_SECRET:
+        try:
+            tok = userdata.get(nome)          # levanta se o secret não existir
+        except Exception:
+            continue
+        if tok:
+            os.environ["GH_TOKEN"] = tok
+            _origem_token = f"secret '{nome}' do Colab"
+            return tok
+    return None
+
+
+def verificar_token():
+    """Diz se achou o token e de onde veio. Nunca imprime o valor."""
+    tok = _token()
+    if tok:
+        print(f"token ok -- lido do {_origem_token} ({len(tok)} caracteres)")
+        return True
+    print("token NÃO encontrado. Você consegue baixar, mas não subir.\n"
+          f"Procurei pelos secrets: {', '.join(NOMES_SECRET)}\n"
+          "Renomeie o seu secret pra GH_TOKEN, ou rode antes:\n"
+          "    import os; from google.colab import userdata\n"
+          "    os.environ['GH_TOKEN'] = userdata.get('NOME_DO_SEU_SECRET')")
+    return False
 
 
 def _limpa(texto):
