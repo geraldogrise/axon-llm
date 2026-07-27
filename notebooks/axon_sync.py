@@ -161,6 +161,40 @@ def _preparar(branch, escrita=False):
     return destino
 
 
+def _relativos(raiz):
+    """Todos os arquivos sob `raiz`, em caminho relativo, ignorando o .git."""
+    achados = set()
+    for base, _, arquivos in os.walk(raiz):
+        if ".git" in base.split(os.sep):
+            continue
+        rel = os.path.relpath(base, raiz)
+        for nome in arquivos:
+            achados.add(os.path.normpath(os.path.join(rel, nome)))
+    return achados
+
+
+def _mesclar(origem, destino):
+    """Copia origem sobre destino SEM apagar o que só existe no destino.
+
+    É o que impede uma conta de derrubar o que outra subiu: o Drive desta sessão
+    quase nunca tem o conjunto completo, e substituir a pasta apagaria o resto.
+    Devolve (novos, sobrescritos, preservados).
+    """
+    os.makedirs(destino, exist_ok=True)
+    ja_estavam = _relativos(destino)
+    vindos = set()
+
+    for base, _, arquivos in os.walk(origem):
+        rel = os.path.relpath(base, origem)
+        alvo = destino if rel == "." else os.path.join(destino, rel)
+        os.makedirs(alvo, exist_ok=True)
+        for nome in arquivos:
+            vindos.add(os.path.normpath(os.path.join(rel, nome)))
+            shutil.copy2(os.path.join(base, nome), os.path.join(alvo, nome))
+
+    return len(vindos - ja_estavam), len(vindos & ja_estavam), len(ja_estavam - vindos)
+
+
 def _medir(raiz):
     """(total de bytes, nº de arquivos, os que passam dos limites do GitHub)."""
     total, n, grandes = 0, 0, []
@@ -192,8 +226,16 @@ def status():
               f"{'existe' if _branch_existe(branch) else '—':<10} {descricao}")
 
 
-def subir(tipo, mensagem=None, forcar=False):
-    """Drive -> git. Copia a pasta pra branch do tipo, commita e faz push."""
+def subir(tipo, mensagem=None, forcar=False, substituir=False):
+    """Drive -> git. Mescla a pasta desta conta na branch do tipo, commita e faz push.
+
+    Mescla, não substitui: o que já está na branch e não existe no Drive desta sessão
+    é preservado. Sem isso, subir de uma conta apagaria o que outra tivesse subido --
+    nenhuma conta costuma ter o conjunto completo.
+
+    `substituir=True` faz a branch refletir exatamente este Drive, apagando o resto.
+    Só use se quiser mesmo descartar o que está lá.
+    """
     pasta, branch, _ = _checa(tipo)
     origem = _drive(pasta)
 
@@ -215,9 +257,16 @@ def subir(tipo, mensagem=None, forcar=False):
 
     repo = _preparar(branch, escrita=True)
     destino = os.path.join(repo, pasta)
-    if os.path.isdir(destino):
-        shutil.rmtree(destino)
-    shutil.copytree(origem, destino)
+
+    if substituir:
+        if os.path.isdir(destino):
+            shutil.rmtree(destino)
+        shutil.copytree(origem, destino)
+        print("modo substituir: a branch passa a refletir só este Drive")
+    else:
+        novos, sobrescritos, preservados = _mesclar(origem, destino)
+        print(f"{novos} novos · {sobrescritos} atualizados · "
+              f"{preservados} preservados (estavam na branch, não neste Drive)")
 
     _git(["add", "-A"], cwd=repo)
     if not _git(["status", "--porcelain"], cwd=repo).stdout.strip():
