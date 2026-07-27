@@ -289,7 +289,11 @@ def subir(tipo, mensagem=None, forcar=False, substituir=False):
 # (huggingface.co/settings/tokens), guardado no secret `HF_TOKEN` do Colab.
 # ---------------------------------------------------------------------------
 
-REPO_HF = "geraldogrise/axon-lang"
+# Deixe None: o dono é descoberto pelo próprio token (o usuário do Hugging Face não
+# tem relação com o do GitHub). Preencha só se quiser um repositório específico,
+# no formato "usuario/repositorio".
+REPO_HF = None
+NOME_REPO_HF = "axon-lang"
 
 
 def _token_hf():
@@ -311,6 +315,38 @@ def _token_hf():
     return None
 
 
+def _repo_hf(repo_id=None):
+    """Resolve o repositório no Hub. Sem nome explícito, pergunta ao token quem é o dono.
+
+    Isso evita o palpite errado de reaproveitar o usuário do GitHub: as duas contas
+    são independentes e o nome não precisa coincidir.
+    """
+    if repo_id:
+        return repo_id
+    if REPO_HF:
+        return REPO_HF
+    from huggingface_hub import HfApi
+    tok = _token_hf()
+    if not tok:
+        raise RuntimeError("sem HF_TOKEN não dá pra descobrir o seu usuário no Hub; "
+                           "passe repo_id='usuario/repositorio'")
+    dono = HfApi(token=tok).whoami()["name"]
+    return f"{dono}/{NOME_REPO_HF}"
+
+
+def quem_sou_hf():
+    """Mostra com qual conta do Hugging Face o token está autenticado."""
+    from huggingface_hub import HfApi
+    tok = _token_hf()
+    if not tok:
+        print("HF_TOKEN não encontrado nos secrets do Colab")
+        return None
+    eu = HfApi(token=tok).whoami()
+    print(f"Hugging Face: {eu['name']}  ->  repositório padrão: "
+          f"{eu['name']}/{NOME_REPO_HF}")
+    return eu["name"]
+
+
 def subir_hf(tipo, repo_id=None, privado=True):
     """Drive -> Hugging Face Hub. Sem limite de tamanho por arquivo."""
     from huggingface_hub import HfApi
@@ -328,7 +364,7 @@ def subir_hf(tipo, repo_id=None, privado=True):
             "subir_hf precisa de um token do Hugging Face com escrita. Crie em "
             "huggingface.co/settings/tokens e guarde no secret HF_TOKEN do Colab.")
 
-    repo = repo_id or REPO_HF
+    repo = _repo_hf(repo_id)
     api = HfApi(token=tok)
     api.create_repo(repo, repo_type="model", private=privado, exist_ok=True)
     print(f"enviando {n} arquivos ({total / 1e6:.0f} MB) pra {repo}/{pasta} ...",
@@ -345,7 +381,7 @@ def baixar_hf(tipo, repo_id=None):
     from huggingface_hub import snapshot_download
 
     pasta, _, _ = _checa(tipo)
-    repo = repo_id or REPO_HF
+    repo = _repo_hf(repo_id)
     destino = _drive(pasta)
 
     caminho = snapshot_download(repo_id=repo, repo_type="model",
