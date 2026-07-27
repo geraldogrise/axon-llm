@@ -278,6 +278,88 @@ def subir(tipo, mensagem=None, forcar=False, substituir=False):
     print(f"\nsubiu pra branch '{branch}' de {REPO_DADOS}")
 
 
+# ---------------------------------------------------------------------------
+# Hugging Face Hub -- pros arquivos que o git não aceita
+#
+# O GitHub rejeita acima de 100 MB e não há como contornar. Adapter PEFT de um 7B
+# passa disso. O Hub foi feito pra peso de modelo: gratuito em repositório público,
+# sem esse limite, e é de onde o próprio Unsloth carrega os modelos base.
+#
+# Precisa de um token do Hugging Face com permissão de escrita
+# (huggingface.co/settings/tokens), guardado no secret `HF_TOKEN` do Colab.
+# ---------------------------------------------------------------------------
+
+REPO_HF = "geraldogrise/axon-lang"
+
+
+def _token_hf():
+    tok = os.environ.get("HF_TOKEN")
+    if tok:
+        return tok
+    try:
+        from google.colab import userdata
+        for nome in ("HF_TOKEN", "HUGGINGFACE_TOKEN", "hf_token"):
+            try:
+                tok = userdata.get(nome)
+            except Exception:
+                continue
+            if tok:
+                os.environ["HF_TOKEN"] = tok
+                return tok
+    except Exception:
+        pass
+    return None
+
+
+def subir_hf(tipo, repo_id=None, privado=True):
+    """Drive -> Hugging Face Hub. Sem limite de tamanho por arquivo."""
+    from huggingface_hub import HfApi
+
+    pasta, _, _ = _checa(tipo)
+    origem = _drive(pasta)
+    total, n, _ = _medir(origem)
+    if n == 0:
+        print(f"{pasta} está vazia no Drive desta conta -- nada a subir")
+        return
+
+    tok = _token_hf()
+    if not tok:
+        raise RuntimeError(
+            "subir_hf precisa de um token do Hugging Face com escrita. Crie em "
+            "huggingface.co/settings/tokens e guarde no secret HF_TOKEN do Colab.")
+
+    repo = repo_id or REPO_HF
+    api = HfApi(token=tok)
+    api.create_repo(repo, repo_type="model", private=privado, exist_ok=True)
+    print(f"enviando {n} arquivos ({total / 1e6:.0f} MB) pra {repo}/{pasta} ...",
+          flush=True)
+
+    # Sobe só esta subpasta: o que outras contas mandaram continua onde está.
+    api.upload_folder(folder_path=origem, path_in_repo=pasta, repo_id=repo,
+                      repo_type="model", commit_message=f"sync {tipo}: {n} arquivos")
+    print(f"pronto: https://huggingface.co/{repo}/tree/main/{pasta}")
+
+
+def baixar_hf(tipo, repo_id=None):
+    """Hugging Face Hub -> Drive."""
+    from huggingface_hub import snapshot_download
+
+    pasta, _, _ = _checa(tipo)
+    repo = repo_id or REPO_HF
+    destino = _drive(pasta)
+
+    caminho = snapshot_download(repo_id=repo, repo_type="model",
+                                allow_patterns=f"{pasta}/*", token=_token_hf())
+    origem = os.path.join(caminho, pasta)
+    if not os.path.isdir(origem):
+        print(f"{repo} não tem a pasta {pasta}")
+        return
+
+    novos, sobrescritos, preservados = _mesclar(origem, destino)
+    print(f"{novos} novos · {sobrescritos} atualizados · {preservados} preservados")
+    print("em:", destino)
+
+
 def baixar(tipo, sobrescrever=False):
     """git -> Drive. Traz a branch do tipo e copia pra pasta do Drive desta conta."""
     pasta, branch, _ = _checa(tipo)
