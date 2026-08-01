@@ -45,6 +45,21 @@ rode a mesma célula outra vez — ela acha o último `checkpoint-<n>` e retoma 
 A célula 10 junta as duas metades: o router escolhe a família, o KB recupera a lição,
 o LoRA responde com esse material no prompt.
 
+### 2b. `finetune_1.5b_colab.ipynb` — o mesmo, no modelo pequeno
+Treina uma **fila** de experts no Qwen-Coder 1.5B em vez de um por vez. Faz sentido
+porque a rodada cai de ~13 min para ~4-5 min: repetir oito células dezoito vezes viraria
+o gargalo.
+
+Existe porque, numa máquina sem GPU, o 7B fica inviável de usar — medido, mesma pergunta:
+
+| | entrada | prefill | total |
+|---|---:|---:|---:|
+| axon-go (7B) | 283 tok | 55,4 s | 105 s |
+| qwen 1.5B | 283 tok | 10,8 s | 48 s |
+
+As pastas são separadas por base (`axon_lora/qwen-1.5b/` contra `axon_lora/qwen/`), então
+nada sobrescreve os adapters do 7B.
+
 ### 3. `cuda_colab.ipynb` — opcional
 Compila o pyaxon com CUDA/cuBLAS e mede o speedup do `matmul` (e do treino) na GPU.
 Não é necessário pros dois de cima; é a demonstração de que o backend de GPU funciona.
