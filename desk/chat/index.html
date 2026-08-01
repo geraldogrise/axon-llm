@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'">
+<title>axon-chat</title>
+<link rel="stylesheet" href="../comum.css">
+</head>
+<body class="app-chat">
+
+<header class="cabeca">
+  <h1>axon<span>-chat</span></h1>
+  <span class="dica" id="rota-atual"></span>
+  <div class="estado-linha">
+    <span id="e-experts">…</span>
+    <span id="e-ollama">…</span>
+    <span id="e-tokens">0 / 0</span>
+  </div>
+</header>
+
+<div class="conversa" id="conversa">
+  <div class="vazio">
+    Pergunte sobre Go. O router escolhe o expert e o índice traz a lição antes de o
+    modelo escrever — a resposta vem fundamentada nesse material, não da memória dele.
+  </div>
+</div>
+
+<form class="entrada" id="form">
+  <textarea id="campo" rows="1" placeholder="pergunte…"></textarea>
+  <button type="submit" id="enviar">enviar</button>
+  <button type="button" id="parar" class="parar" hidden>parar</button>
+</form>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'">
+<title>axon-code</title>
+<link rel="stylesheet" href="../comum.css">
+</head>
+<body class="app-code">
+
+<header class="cabeca">
+  <h1>axon<span>-code</span></h1>
+  <span class="dica" id="cwd"></span>
+  <div class="estado-linha">
+    <span id="e-experts">…</span>
+    <span id="e-ollama">…</span>
+  </div>
+</header>
+
+<div class="terminal" id="terminal"><div class="abertura">axon-code — comando roda, pergunta vai pro modelo.
+  git status          executa
+  o que e um canal?   pergunta ao expert
+  :cd &lt;caminho&gt;       troca de diretorio
+  :limpar             limpa a tela
+</div></div>
+
+<form class="entrada" id="form">
+  <span class="prompt">›</span>
+  <input id="campo" autocomplete="off" spellcheck="false"
+         placeholder="git status   ou   como uso select com canais?">
+  <button type="button" id="parar" class="parar" hidden>parar</button>
+</form>
+
+<script src="app.js"></script>
+</body>
+</html>

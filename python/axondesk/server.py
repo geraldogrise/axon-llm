@@ -96,6 +96,8 @@ def construir(motor, barramento, token, origem_permitida="*"):
                     return self._chat(self._corpo())
                 if u.path == "/exec":
                     return self._exec(self._corpo())
+                if u.path == "/code":
+                    return self._code(self._corpo())
                 if u.path == "/cancel":
                     run_id = self._corpo().get("run_id", "")
                     return self._json(200, {"cancelado": llm.REGISTRO.cancelar(run_id)})
@@ -137,6 +139,30 @@ def construir(motor, barramento, token, origem_permitida="*"):
                              args=(barramento, run_id, comando, cwd)).start()
             return None
 
+        def _code(self, dados):
+            """O terminal decide sozinho: comando roda, pergunta vai pro modelo.
+
+            `git status` tem que sair instantâneo. Mandar isso pro LLM seria trocar
+            30 ms por 30 s para chegar na mesma resposta.
+            """
+            from . import exec as execmod
+
+            texto = (dados.get("texto") or "").strip()
+            if not texto:
+                return self._json(400, {"erro": "vazio"})
+            cwd = dados.get("cwd") or os.getcwd()
+
+            if execmod.parece_comando(texto):
+                return self._exec({"comando": texto, "cwd": cwd})
+
+            modelo = dados.get("modelo") or "qwen2.5-coder:7b-instruct"
+            run_id = "run_" + uuid.uuid4().hex[:12]
+            self._json(200, {"run_id": run_id, "modo": "pergunta"})
+            threading.Thread(target=_responder, daemon=True,
+                             args=(motor, barramento, run_id, texto, modelo,
+                                   "code")).start()
+            return None
+
     return Handler
 
 
@@ -153,9 +179,21 @@ def _rodar_comando(barramento, run_id, comando, cwd):
     execmod.executar(comando, cwd, ao_sair)
 
 
-def _responder(motor, barramento, run_id, texto, modelo):
+SISTEMA = {
+    "chat": "Você responde em português do Brasil, de forma direta e técnica. "
+            "Use o material fornecido. Se ele não cobrir a pergunta, diga isso em vez "
+            "de inventar.",
+    # No terminal, resposta longa é atrito: quem está ali quer o comando ou o trecho.
+    "code": "Você responde em português do Brasil dentro de um terminal. Seja breve: "
+            "no máximo 5 linhas, preferindo o comando ou o trecho de código direto, "
+            "sem introdução. Use o material fornecido; se ele não cobrir, diga isso.",
+}
+
+
+def _responder(motor, barramento, run_id, texto, modelo, painel="chat"):
     """Roteia, recupera e transmite. Roda fora da thread do pedido."""
-    barramento.publicar({"tipo": "usuario", "run_id": run_id, "texto": texto})
+    barramento.publicar({"tipo": "usuario", "run_id": run_id, "texto": texto,
+                         "painel": painel})
 
     expert, passagens = motor.recuperar(texto)
     if expert is None:
@@ -171,17 +209,25 @@ def _responder(motor, barramento, run_id, texto, modelo):
                          "passagens": [{"caminho": p["caminho"], "score": p["score"]}
                                        for p in passagens]})
 
-    contexto = "\n\n---\n\n".join(p["texto"] for p in passagens)
+    # No terminal o contexto vai menor de propósito: a 7 tok/s de prefill medidos nesta
+    # máquina, cada 100 tokens de material custa ~14 s antes do primeiro caractere.
+    limite = 900 if painel == "code" else 2400
+    partes, total = [], 0
+    for p in passagens:
+        if total + len(p["texto"]) > limite:
+            break
+        partes.append(p["texto"])
+        total += len(p["texto"])
+    contexto = "\n\n---\n\n".join(partes) or (passagens[0]["texto"][:limite])
+
     mensagens = [
-        {"role": "system",
-         "content": "Você responde em português do Brasil, de forma direta e técnica. "
-                    "Use o material fornecido. Se ele não cobrir a pergunta, diga isso "
-                    "em vez de inventar."},
+        {"role": "system", "content": SISTEMA.get(painel, SISTEMA["chat"])},
         {"role": "user", "content": f"MATERIAL:\n{contexto}\n\nPERGUNTA: {texto}"},
     ]
 
     try:
-        for pedaco in llm.chat_stream(mensagens, modelo=modelo, run_id=run_id):
+        for pedaco in llm.chat_stream(mensagens, modelo=modelo, run_id=run_id,
+                                      num_predict=320 if painel == "code" else 1024):
             if pedaco.get("done"):
                 barramento.publicar({
                     "tipo": "fim", "run_id": run_id,

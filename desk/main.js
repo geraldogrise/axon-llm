@@ -1,7 +1,8 @@
-// Sobe o backend Python como filho, lê o aperto de mão do stdout e abre a janela.
+// Duas aplicações, um main. Qual abre vem de `--painel=chat|code` (ou AXON_PAINEL).
 //
-// O backend imprime UMA linha no stdout -- porta e token -- e nunca mais escreve ali.
-// Todo o resto dele vai para stderr, que só encaminhamos para o console.
+// Cada aplicação sobe o próprio backend. Podia haver um só compartilhado, mas isso
+// exigiria descoberta e ciclo de vida entre processos -- e com um expert a subida é de
+// segundos. Quando os 19 entrarem, vale compartilhar.
 
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { spawn } = require("child_process");
@@ -10,9 +11,18 @@ const path = require("path");
 const RAIZ = path.join(__dirname, "..");
 const PYTHON = process.env.AXON_PYTHON || "python";
 
+const PAINEL =
+  (process.argv.find((a) => a.startsWith("--painel=")) || "").split("=")[1] ||
+  process.env.AXON_PAINEL ||
+  "chat";
+
+const JANELAS = {
+  chat: { titulo: "axon-chat", largura: 900, altura: 820 },
+  code: { titulo: "axon-code", largura: 940, altura: 640 },
+};
+
 let backend = null;
-let conexao = null; // {porta, token}
-let janela = null;
+let conexao = null;
 
 function subirBackend() {
   return new Promise((resolve, reject) => {
@@ -22,50 +32,53 @@ function subirBackend() {
 
     backend = spawn(PYTHON, args, {
       cwd: path.join(RAIZ, "python"),
-      // stdin ignorado de propósito: uma thread parada lendo stdin congela o backend
-      // quando o pyaxon está carregado. A morte do pai é detectada por --pai.
+      // stdin ignorado: uma thread parada lendo stdin congela o backend com o pyaxon
+      // carregado. A morte do pai é detectada por --pai.
       stdio: ["ignore", "pipe", "pipe"],
     });
 
     let buffer = "";
-    const aoSair = setTimeout(
-      () => reject(new Error("o backend não respondeu em 60s")),
-      60000
+    const prazo = setTimeout(
+      () => reject(new Error("o backend não respondeu em 90s")),
+      90000
     );
 
     backend.stdout.on("data", (d) => {
       buffer += d.toString();
-      const linha = buffer.split("\n").find((l) => l.startsWith("AXON_DESK_READY"));
+      const linha = buffer
+        .split("\n")
+        .find((l) => l.startsWith("AXON_DESK_READY"));
       if (linha) {
-        clearTimeout(aoSair);
+        clearTimeout(prazo);
         conexao = JSON.parse(linha.slice("AXON_DESK_READY".length).trim());
-        console.log("[backend] pronto na porta", conexao.porta);
+        console.log(`[${PAINEL}] backend na porta`, conexao.porta);
         resolve(conexao);
       }
     });
 
-    backend.stderr.on("data", (d) => process.stderr.write("[backend] " + d));
-    backend.on("exit", (c) => console.log("[backend] saiu com", c));
+    backend.stderr.on("data", (d) => process.stderr.write(`[${PAINEL}] ` + d));
     backend.on("error", reject);
   });
 }
 
 function criarJanela() {
-  janela = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    backgroundColor: "#14181c",
-    title: "axon-desk",
+  const cfg = JANELAS[PAINEL] || JANELAS.chat;
+  const janela = new BrowserWindow({
+    width: cfg.largura,
+    height: cfg.altura,
+    backgroundColor: PAINEL === "code" ? "#10141a" : "#14181c",
+    title: cfg.titulo,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
-  janela.loadFile(path.join(__dirname, "renderer", "index.html"));
+  janela.loadFile(path.join(__dirname, PAINEL, "index.html"));
 }
 
 ipcMain.handle("conexao", () => conexao);
+ipcMain.handle("painel", () => PAINEL);
 
 app.whenReady().then(async () => {
   try {
@@ -77,7 +90,6 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => app.quit());
-
 app.on("before-quit", () => {
   if (backend && !backend.killed) backend.kill();
 });

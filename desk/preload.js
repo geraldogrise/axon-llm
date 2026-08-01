@@ -25,9 +25,14 @@ async function pedir(rota, corpo) {
 }
 
 contextBridge.exposeInMainWorld("axon", {
+  painel: () => ipcRenderer.invoke("painel"),
   saude: () => pedir("/health"),
   perguntar: (texto, modelo) => pedir("/chat", { texto, modelo }),
   executar: (comando, cwd) => pedir("/exec", { comando, cwd }),
+
+  // O terminal manda tudo por aqui: o backend decide se é comando ou pergunta.
+  linha: (texto, cwd, modelo) => pedir("/code", { texto, cwd, modelo }),
+
   cancelar: (run_id) => pedir("/cancel", { run_id }),
 
   // O EventSource não manda cabeçalho, então o token vai na query -- é loopback e o

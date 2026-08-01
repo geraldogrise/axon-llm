@@ -1,0 +1,136 @@
+/* Estilo comum às duas aplicações. Grafite com latão, escuro fixo: são ferramentas
+   de terminal, não documentos. */
+:root {
+  --fundo:    #14181c;
+  --painel:   #1b2027;
+  --painel-2: #232a32;
+  --tinta:    #e6eaee;
+  --tinta-2:  #a3aeb8;
+  --tinta-3:  #79848f;
+  --linha:    #2c333b;
+  --latao:    #d2a73f;
+  --ok:       #6dbf95;
+  --erro:     #e58a8a;
+
+  --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 14px;
+  overflow: hidden;
+}
+
+body.app-code { background: #10141a; }
+
+/* ---------------------------------------------------------------- cabeça */
+.cabeca {
+  display: flex; align-items: center; gap: .8rem; flex: none;
+  padding: .6rem 1rem; border-bottom: 1px solid var(--linha);
+  background: var(--painel);
+}
+body.app-code .cabeca { background: #161b22; }
+
+.cabeca h1 {
+  font-family: var(--mono); font-size: .92rem; font-weight: 650;
+  margin: 0; color: var(--latao);
+}
+.cabeca h1 span { color: var(--tinta-3); }
+
+.dica {
+  font-family: var(--mono); font-size: .72rem; color: var(--tinta-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.estado-linha {
+  margin-left: auto; display: flex; gap: .9rem;
+  font-family: var(--mono); font-size: .7rem; color: var(--tinta-3);
+  white-space: nowrap;
+}
+.estado-linha .ok { color: var(--ok); }
+.estado-linha .ruim { color: var(--erro); }
+
+/* ---------------------------------------------------------------- conversa */
+.conversa {
+  flex: 1; overflow-y: auto; padding: 1.2rem 1.4rem;
+  display: flex; flex-direction: column; gap: 1.1rem;
+}
+.vazio { color: var(--tinta-3); font-size: .88rem; max-width: 52ch; line-height: 1.65; }
+
+.msg { display: flex; flex-direction: column; gap: .35rem; }
+.msg .quem {
+  font-family: var(--mono); font-size: .64rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--tinta-3);
+}
+.msg .corpo { white-space: pre-wrap; line-height: 1.65; word-break: break-word; }
+.msg.eu .corpo {
+  background: var(--painel-2); border-left: 2px solid var(--latao);
+  border-radius: 2px; padding: .55rem .75rem;
+}
+.msg.erro .corpo { color: var(--erro); }
+
+.rota {
+  font-family: var(--mono); font-size: .7rem; color: var(--tinta-3);
+  border: 1px solid var(--linha); border-radius: 2px;
+  padding: .3rem .55rem; align-self: flex-start;
+}
+.rota b { color: var(--latao); font-weight: 500; }
+
+.pensando {
+  font-family: var(--mono); font-size: .78rem; color: var(--tinta-3);
+  align-self: flex-start;
+}
+
+/* ---------------------------------------------------------------- terminal */
+.terminal {
+  flex: 1; overflow-y: auto; padding: .9rem 1.1rem;
+  font-family: var(--mono); font-size: .8rem; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+}
+.terminal .abertura { color: var(--tinta-3); margin-bottom: .8rem; }
+.terminal .cmd { color: var(--latao); margin-top: .5rem; }
+.terminal .cmd::before { content: "› "; color: var(--tinta-3); }
+.terminal .rota-linha { color: var(--tinta-3); }
+.terminal .resposta { color: var(--tinta); margin: .3rem 0; }
+.terminal .fim { color: var(--tinta-3); font-size: .73rem; }
+.terminal .fim.ruim { color: var(--erro); }
+
+/* ---------------------------------------------------------------- entrada */
+.entrada {
+  display: flex; align-items: flex-end; gap: .55rem; flex: none;
+  padding: .7rem 1rem; border-top: 1px solid var(--linha);
+  background: var(--painel);
+}
+body.app-code .entrada { background: #161b22; align-items: center; }
+
+.entrada textarea, .entrada input {
+  flex: 1; resize: none; background: var(--painel-2); color: var(--tinta);
+  border: 1px solid var(--linha); border-radius: 3px;
+  padding: .55rem .65rem; font-family: inherit; font-size: .88rem;
+  max-height: 8rem;
+}
+.entrada input { font-family: var(--mono); }
+.entrada textarea:focus, .entrada input:focus {
+  outline: none; border-color: var(--latao);
+}
+.entrada input:disabled { opacity: .5; }
+
+.entrada button {
+  background: var(--latao); color: #14181c; border: none; border-radius: 3px;
+  padding: .55rem .95rem; font-family: var(--mono); font-size: .78rem;
+  font-weight: 600; cursor: pointer; flex: none;
+}
+.entrada button.parar {
+  background: none; color: var(--erro); border: 1px solid var(--erro);
+}
+
+.prompt { font-family: var(--mono); color: var(--tinta-3); flex: none; }
