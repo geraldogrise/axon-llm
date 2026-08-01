@@ -35,7 +35,19 @@ async function atualizarEstado() {
     $("e-experts").className = e.estado === "pronto" ? "ok" : "";
     $("e-ollama").textContent = s.ollama ? "ollama no ar" : "ollama fora";
     $("e-ollama").className = s.ollama ? "ok" : "ruim";
-    modelo = (s.modelos || [])[0] || null;
+    const sel = $("modelo");
+    const lista = s.modelos || [];
+    if (sel.options.length !== lista.length) {
+      const escolhido = sel.value;
+      sel.innerHTML = "";
+      lista.forEach((m) => {
+        const o = document.createElement("option");
+        o.value = o.textContent = m;
+        sel.appendChild(o);
+      });
+      if (lista.includes(escolhido)) sel.value = escolhido;
+    }
+    modelo = sel.value || lista[0] || null;
   } catch {
     $("e-experts").textContent = "backend fora";
     $("e-experts").className = "ruim";

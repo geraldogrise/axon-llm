@@ -80,7 +80,18 @@ def construir(motor, barramento, token, origem_permitida="*"):
                 })
 
             if u.path == "/events":
-                desde = int((params.get("desde") or ["0"])[0])
+                # Sem pedido explícito, só o que vier daqui pra frente. O padrão antigo
+                # (desde=0) reenviava a sessão inteira a cada conexão -- e uma aba
+                # reaberta reexibia respostas antigas como se fossem novas.
+                # O EventSource manda `Last-Event-ID` sozinho ao reconectar; é ele que
+                # diz de onde retomar.
+                ultimo = self.headers.get("Last-Event-ID")
+                if "desde" in params:
+                    desde = int(params["desde"][0])
+                elif ultimo and ultimo.isdigit():
+                    desde = int(ultimo)
+                else:
+                    desde = barramento.seq
                 return sse.escrever(self, barramento, desde=desde)
 
             return self._json(404, {"erro": "rota inexistente"})
@@ -179,6 +190,11 @@ def _rodar_comando(barramento, run_id, comando, cwd):
     execmod.executar(comando, cwd, ao_sair)
 
 
+# Abaixo disto o melhor trecho recuperado não tem a ver com a pergunta, e injetá-lo só
+# faz o usuário esperar. Calibrado nas medições: acerto bom fica em 0,45-0,6; ruído
+# genérico cai abaixo de 0,3.
+MIN_SCORE = 0.35
+
 SISTEMA = {
     "chat": "Você responde em português do Brasil, de forma direta e técnica. "
             "Use o material fornecido. Se ele não cobrir a pergunta, diga isso em vez "
@@ -187,6 +203,14 @@ SISTEMA = {
     "code": "Você responde em português do Brasil dentro de um terminal. Seja breve: "
             "no máximo 5 linhas, preferindo o comando ou o trecho de código direto, "
             "sem introdução. Use o material fornecido; se ele não cobrir, diga isso.",
+}
+
+# Sem material relevante não se promete material -- pedir para "usar o contexto" quando
+# não há contexto é o que faz o modelo inventar uma fonte.
+SISTEMA_DIRETO = {
+    "chat": "Você responde em português do Brasil, de forma direta e técnica.",
+    "code": "Você responde em português do Brasil dentro de um terminal. Seja breve: "
+            "no máximo 5 linhas, preferindo o código direto, sem introdução.",
 }
 
 
@@ -204,26 +228,47 @@ def _responder(motor, barramento, run_id, texto, modelo, painel="chat"):
         return
 
     _, ranking = motor.rotear(texto)
-    barramento.publicar({"tipo": "rota", "run_id": run_id, "expert": expert,
-                         "ranking": ranking[:5],
-                         "passagens": [{"caminho": p["caminho"], "score": p["score"]}
-                                       for p in passagens]})
 
-    # No terminal o contexto vai menor de propósito: a 7 tok/s de prefill medidos nesta
-    # máquina, cada 100 tokens de material custa ~14 s antes do primeiro caractere.
-    limite = 900 if painel == "code" else 2400
-    partes, total = [], 0
-    for p in passagens:
-        if total + len(p["texto"]) > limite:
-            break
-        partes.append(p["texto"])
-        total += len(p["texto"])
-    contexto = "\n\n---\n\n".join(partes) or (passagens[0]["texto"][:limite])
+    # Contexto é caro: a 7 tok/s de prefill medidos nesta máquina, 2.400 caracteres
+    # custam ~90 s antes do primeiro caractere. Só vale a pena quando o material tem
+    # mesmo a ver com a pergunta. "escreva um hello world em Go" não precisa de lição
+    # nenhuma -- o modelo já sabe, e recuperar só faz esperar.
+    melhor = passagens[0]["score"] if passagens else 0.0
+    usar_contexto = melhor >= MIN_SCORE
 
-    mensagens = [
-        {"role": "system", "content": SISTEMA.get(painel, SISTEMA["chat"])},
-        {"role": "user", "content": f"MATERIAL:\n{contexto}\n\nPERGUNTA: {texto}"},
-    ]
+    limite = 800 if painel == "code" else 1600
+    contexto, usadas = "", []
+    if usar_contexto:
+        partes, total = [], 0
+        for p in passagens:
+            if total + len(p["texto"]) > limite:
+                break
+            partes.append(p["texto"])
+            usadas.append({"caminho": p["caminho"], "score": p["score"]})
+            total += len(p["texto"])
+        if not partes:                       # a primeira já estoura o limite: corta
+            partes = [passagens[0]["texto"][:limite]]
+            usadas = [{"caminho": passagens[0]["caminho"], "score": melhor}]
+        contexto = "\n\n---\n\n".join(partes)
+
+    barramento.publicar({
+        "tipo": "rota", "run_id": run_id, "expert": expert, "ranking": ranking[:5],
+        "passagens": usadas,
+        "com_contexto": usar_contexto,
+        "chars_contexto": len(contexto),
+        "melhor_score": round(melhor, 3),
+    })
+
+    sistema = SISTEMA.get(painel, SISTEMA["chat"])
+    if usar_contexto:
+        conteudo = f"MATERIAL:\n{contexto}\n\nPERGUNTA: {texto}"
+    else:
+        # Sem material relevante, perguntar direto -- e sem prometer que há material.
+        sistema = SISTEMA_DIRETO.get(painel, SISTEMA_DIRETO["chat"])
+        conteudo = texto
+
+    mensagens = [{"role": "system", "content": sistema},
+                 {"role": "user", "content": conteudo}]
 
     try:
         for pedaco in llm.chat_stream(mensagens, modelo=modelo, run_id=run_id,

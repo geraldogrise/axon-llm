@@ -134,3 +134,12 @@ body.app-code .entrada { background: #161b22; align-items: center; }
 }
 
 .prompt { font-family: var(--mono); color: var(--tinta-3); flex: none; }
+
+/* seletor de modelo no cabeçalho */
+#modelo {
+  font-family: var(--mono); font-size: .7rem;
+  background: var(--painel-2); color: var(--tinta-2);
+  border: 1px solid var(--linha); border-radius: 2px;
+  padding: .15rem .3rem; max-width: 16rem;
+}
+#modelo:focus { outline: none; border-color: var(--latao); }
