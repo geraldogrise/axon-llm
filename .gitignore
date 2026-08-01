@@ -45,6 +45,9 @@ CMakeFiles/
 *.gguf
 
 # Adapters baixados do Drive: o README e os Modelfile entram, os pesos não.
-/adapters/*
+# Os pesos (.gguf) ficam de fora; README e Modelfile entram, em qualquer subpasta.
+/adapters/**
+!/adapters/**/
+!/adapters/**/README.md
 !/adapters/README.md
-!/adapters/Modelfile*
+!/adapters/**/Modelfile*
