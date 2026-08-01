@@ -1,0 +1,13 @@
+{
+  "name": "axon-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "axon-chat e axon-code sobre os experts do axon-lang",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}

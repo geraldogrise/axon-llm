@@ -23,6 +23,10 @@ dist/
 venv/
 .pytest_cache/
 
+# Node / Electron
+node_modules/
+package-lock.json
+
 # IDE / OS
 .vscode/
 .idea/

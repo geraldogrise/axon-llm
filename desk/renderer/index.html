@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'">
+<title>axon-desk</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<aside class="lateral">
+  <div class="marca">axon<span>-desk</span></div>
+
+  <div class="secao">projeto</div>
+  <div class="projeto" id="projeto">axon-llm</div>
+
+  <div class="secao">estado</div>
+  <div class="estado" id="estado">
+    <div class="linha"><span>backend</span><b id="e-backend">…</b></div>
+    <div class="linha"><span>experts</span><b id="e-experts">…</b></div>
+    <div class="linha"><span>ollama</span><b id="e-ollama">…</b></div>
+    <div class="linha"><span>modelo</span><b id="e-modelo">…</b></div>
+  </div>
+
+  <div class="secao">tokens</div>
+  <div class="estado">
+    <div class="linha"><span>entrada</span><b id="t-entrada">0</b></div>
+    <div class="linha"><span>saída</span><b id="t-saida">0</b></div>
+    <div class="linha"><span>prefill</span><b id="t-prefill">—</b></div>
+  </div>
+
+  <div class="rodape">
+    a geração roda em CPU: o primeiro token demora
+  </div>
+</aside>
+
+<main class="painel">
+  <header class="cabeca">
+    <h1>axon-chat</h1>
+    <span class="dica" id="rota-atual"></span>
+  </header>
+
+  <div class="conversa" id="conversa">
+    <div class="vazio">Pergunte alguma coisa sobre Go — o router escolhe o expert e o
+      KB traz a lição antes de o modelo escrever.</div>
+  </div>
+
+  <form class="entrada" id="form-chat">
+    <textarea id="campo-chat" rows="1" placeholder="pergunte…"></textarea>
+    <button type="submit" id="enviar">enviar</button>
+    <button type="button" id="parar" class="parar" hidden>parar</button>
+  </form>
+</main>
+
+<section class="painel codigo">
+  <header class="cabeca">
+    <h1>axon-code</h1>
+    <span class="dica" id="cwd"></span>
+  </header>
+
+  <div class="terminal" id="terminal"></div>
+
+  <form class="entrada" id="form-code">
+    <span class="prompt">›</span>
+    <input id="campo-code" placeholder="git status" autocomplete="off" spellcheck="false">
+  </form>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

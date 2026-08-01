@@ -8,6 +8,7 @@ mandar cabeçalho.
 """
 
 import json
+import os
 import sys
 import threading
 import uuid
@@ -93,6 +94,8 @@ def construir(motor, barramento, token, origem_permitida="*"):
             try:
                 if u.path == "/chat":
                     return self._chat(self._corpo())
+                if u.path == "/exec":
+                    return self._exec(self._corpo())
                 if u.path == "/cancel":
                     run_id = self._corpo().get("run_id", "")
                     return self._json(200, {"cancelado": llm.REGISTRO.cancelar(run_id)})
@@ -121,7 +124,33 @@ def construir(motor, barramento, token, origem_permitida="*"):
                              args=(motor, barramento, run_id, texto, modelo)).start()
             return None
 
+        # ------------------------------------------------------------ axon-code
+        def _exec(self, dados):
+            comando = (dados.get("comando") or "").strip()
+            if not comando:
+                return self._json(400, {"erro": "comando vazio"})
+            cwd = dados.get("cwd") or os.getcwd()
+            run_id = "cmd_" + uuid.uuid4().hex[:12]
+
+            self._json(200, {"run_id": run_id, "cwd": cwd})
+            threading.Thread(target=_rodar_comando, daemon=True,
+                             args=(barramento, run_id, comando, cwd)).start()
+            return None
+
     return Handler
+
+
+def _rodar_comando(barramento, run_id, comando, cwd):
+    from . import exec as execmod
+
+    barramento.publicar({"tipo": "comando", "run_id": run_id,
+                         "comando": comando, "cwd": cwd})
+
+    def ao_sair(tipo, dados):
+        barramento.publicar(dict(dados, tipo="saida" if tipo == "saida" else "comando_fim",
+                                 run_id=run_id))
+
+    execmod.executar(comando, cwd, ao_sair)
 
 
 def _responder(motor, barramento, run_id, texto, modelo):
